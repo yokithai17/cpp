@@ -51,6 +51,10 @@ class String {
   ~String();
 
  private:
+  void increase_buff();
+
+  void decrease_buff();
+
   size_t capasity_;
   size_t size_;
   char* buffer_;
