@@ -2,3 +2,5 @@ test.cpp
 a.out
 Makefile
 main.*
+.*
+*.o
