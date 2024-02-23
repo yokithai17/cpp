@@ -1,4 +1,6 @@
 test.cpp
 a.out
 Makefile
-main.*
+main*
+test*
+.vscode
