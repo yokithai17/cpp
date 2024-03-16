@@ -34,3 +34,17 @@ TEST_CASE("testing memory", "[single-file]") {
     str.clear();
     REQUIRE(str == str_copy);
 }
+
+
+TEST_CASE("testing find methods", "[single-file]") {
+    my::String str = "abcdefgh";
+    REQUIRE(str.find("abc") == 0);
+    REQUIRE(str.find("bc") == 1);
+    REQUIRE(str.find(str) == 0);
+    REQUIRE(str.find("cdefgl") == str.length());
+    REQUIRE(str.rfind("abc") == 2);
+    REQUIRE(str.rfind(str) == str.length() - 1);
+    REQUIRE(str.rfind("c") == 2);
+    REQUIRE(str.rfind("bc") == 2);
+    REQUIRE(str.find("h") == str.rfind("h"));
+}
