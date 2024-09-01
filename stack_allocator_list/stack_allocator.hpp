@@ -40,8 +40,10 @@ public:
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    explicit stack_allocator() : (&stack_storage<N>()) {}
+    explicit stack_allocator() : buff(&stack_storage<N>()) {}
 
+    explicit stack_allocator(stack_storage<N>& st) : buff(&st) {}
+    
     template <typename U>
     explicit stack_allocator(const stack_allocator<U, N>& other)
         : buff(const_cast<stack_storage<N>*>(other.buff)) {}
@@ -53,12 +55,11 @@ public:
     }
 
     T* allocate(std::size_t count) {
-
+        buff->allign(alignof(T));
+        return reinterpret_cast<T*>(buff->reserve(count));
     }
 
-    void deallocate(T* ptr, std::size_t count) {
-
-    }
+    void deallocate(T* ptr, std::size_t count) {}
 
     template <typename U>
     struct rebind {

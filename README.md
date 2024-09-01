@@ -6,4 +6,6 @@
 
 [Shapes](https://github.com/yokithai17/cpp/tree/main/geometry)
 
+[deque](https://github.com/yokithai17/cpp/tree/main/deque)
+
 [Stack Allocator and List](https://github.com/yokithai17/cpp/tree/main/stack_allocator_list)
