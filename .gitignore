@@ -4,3 +4,4 @@ Makefile
 main*
 test*
 .vscode
+*.out
