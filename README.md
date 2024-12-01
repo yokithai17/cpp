@@ -1,14 +1,19 @@
-# Практика по C++ основной поток ФПМИ
+# STL Classes, from MIPT and ITMO C++ Practise
 
-[String](https://github.com/yokithai17/cpp/tree/main/string)
+[String](./string/)
 
-[Big Integer](https://github.com/yokithai17/cpp/tree/main/big_int)
+[Big Integer](./big_int/)
 
-[Shapes](https://github.com/yokithai17/cpp/tree/main/geometry)
+[Shapes](./geometry/)
 
-[deque](https://github.com/yokithai17/cpp/tree/main/deque)
+[deque](./geometry/)
 
-[Stack Allocator and List](https://github.com/yokithai17/cpp/tree/main/stack_allocator_list)
+[Stack Allocator and List](./stack_allocator_list/)
 
+[Smart ptr](./shared_ptr/)
 
-[Smart ptr](https://github.com/yokithai17/cpp/tree/main/shared_ptr)
+[Optional](./optional/)
+
+[Intrusive list](./intrusive-list/)
+
+[function](./function/)
