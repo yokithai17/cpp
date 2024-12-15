@@ -1,4 +1,4 @@
-# STL Classes, from MIPT and ITMO C++ Practise
+# STL Classes and Other Structures, implemented by my own.
 
 [String](./string/)
 
@@ -17,3 +17,7 @@
 [Intrusive list](./intrusive-list/)
 
 [function](./function/)
+
+[bimap](./bimap/)
+
+[signal and slots](./signal)

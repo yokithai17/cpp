@@ -356,10 +356,20 @@ public:
 
   template <
       typename U = T,
-      typename = std::enable_if_t<
+      std::enable_if_t<
           std::is_constructible_v<T, U> && !std::is_same_v<std::remove_cvref_t<U>, in_place_t> &&
-          !std::is_same_v<optional, std::remove_cvref_t<U>>>>
-  constexpr explicit(!std::is_convertible_v<U, T>) optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U>)
+              !std::is_same_v<optional, std::remove_cvref_t<U>> && !std::is_convertible_v<U, T>,
+          bool> = true>
+  constexpr explicit optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U>)
+      : base_type(in_place, std::forward<U>(value)) {}
+
+  template <
+      typename U = T,
+      std::enable_if_t<
+          std::is_constructible_v<T, U> && !std::is_same_v<std::remove_cvref_t<U>, in_place_t> &&
+              !std::is_same_v<optional, std::remove_cvref_t<U>> && std::is_convertible_v<U, T>,
+          bool> = false>
+  constexpr optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U>)
       : base_type(in_place, std::forward<U>(value)) {}
 
   template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
