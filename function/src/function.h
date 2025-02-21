@@ -1,3 +1,4 @@
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
@@ -15,7 +16,7 @@ public:
 
   ~bad_function_call() = default;
 
-  const char* what() const throw() {
+  const char* what() const noexcept override {
     return message.c_str();
   }
 
@@ -31,14 +32,14 @@ class function<Ret(Args...)> {
   struct storage_t;
   using invoker_ptr_t = Ret (*)(void*, Args&&...);
   using destroy_ptr_t = void (*)(void*);
-
-  //
   using copy_ptr_t = void (*)(void*, void*&, storage_t&);
-
-  //
   using move_copy_ptr_t = void (*)(void*, storage_t&, storage_t*);
 
   static constexpr std::size_t BUFFER_SIZE = sizeof(void*) * 4;
+
+  template <typename F>
+  static constexpr bool can_use_small_buffer = sizeof(F) <= BUFFER_SIZE && std::is_nothrow_move_constructible_v<F> &&
+                                               std::alignment_of_v<F> <= std::alignment_of_v<std::max_align_t>;
 
   struct operations_t {
     operations_t() = default;
@@ -55,9 +56,9 @@ class function<Ret(Args...)> {
 
     operations_t& operator=(const operations_t&) = default;
 
-    destroy_ptr_t destroy_ptr;
+    destroy_ptr_t destroy_ptr{};
     copy_ptr_t copy_ptr;
-    const std::type_info* type_info_ptr;
+    const std::type_info* type_info_ptr{};
     move_copy_ptr_t move_copy_ptr;
   };
 
@@ -80,8 +81,7 @@ class function<Ret(Args...)> {
 
   template <typename F>
   static void destructor(void* fptr) {
-    if constexpr (sizeof(F) <= BUFFER_SIZE && std::is_nothrow_move_constructible_v<F> &&
-                  std::alignment_of_v<F> <= std::alignment_of_v<std::max_align_t>) {
+    if constexpr (can_use_small_buffer<F>) {
       (*static_cast<F*>(fptr)).~F();
     } else {
       delete static_cast<F*>(fptr);
@@ -98,24 +98,18 @@ class function<Ret(Args...)> {
     F* from_fptr = static_cast<F*>(from_void_ptr);
     F*& to_fptr = reinterpret_cast<F*&>(to_void_ptr);
 
-    try {
-      if constexpr (sizeof(F) <= BUFFER_SIZE && std::is_nothrow_move_constructible_v<F> &&
-                    std::alignment_of_v<F> <= std::alignment_of_v<std::max_align_t>) {
-        new (storage.buffer_) F(*from_fptr);
-        to_fptr = reinterpret_cast<F*>(storage.buffer_);
-      } else {
-        F* temp_fptr = new F(*from_fptr);
-        to_fptr = temp_fptr;
-      }
-    } catch (...) {
-      throw;
+    if constexpr (can_use_small_buffer<F>) {
+      new (storage.buffer_) F(*from_fptr);
+      to_fptr = reinterpret_cast<F*>(storage.buffer_);
+    } else {
+      F* temp_fptr = new F(*from_fptr);
+      to_fptr = temp_fptr;
     }
   }
 
   template <typename F>
   static void move_copy(void*, storage_t& from_storage, storage_t* to_storage_ptr) noexcept {
-    if constexpr (sizeof(F) <= BUFFER_SIZE && std::is_nothrow_move_constructible_v<F> &&
-                  std::alignment_of_v<F> <= std::alignment_of_v<std::max_align_t>) {
+    if constexpr (can_use_small_buffer<F>) {
       new (to_storage_ptr) storage_t(from_storage);
     }
   }
@@ -139,8 +133,7 @@ public:
             reinterpret_cast<move_copy_ptr_t>(&move_copy<F>)
         )
       , invoker_ptr_(reinterpret_cast<invoker_ptr_t>(&invoker<F>)) {
-    if constexpr (sizeof(F) <= BUFFER_SIZE && std::is_nothrow_move_constructible_v<F> &&
-                  std::alignment_of_v<F> <= std::alignment_of_v<std::max_align_t>) {
+    if constexpr (can_use_small_buffer<F>) {
       new (storage_.buffer_) F(std::move(func));
       fptr_ = storage_.buffer_;
     } else {
@@ -250,10 +243,3 @@ private:
   operations_t operations_{};
   invoker_ptr_t invoker_ptr_{nullptr};
 };
-
-int main() {
-  function<int()> f = [] {
-    return 42;
-  };
-  return 0;
-}

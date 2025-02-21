@@ -3,7 +3,6 @@
 #include "intrusive_list.h"
 
 #include <functional>
-#include <iostream>
 
 namespace signals {
 
@@ -16,10 +15,10 @@ public:
   using slot_t = std::function<void(Args...)>;
 
   class connection : public intrusive::list_element<struct connection_tag> {
-  public:
     signal* _sig{nullptr};
     slot_t _slot;
 
+  public:
     connection(signal* sig, slot_t slt)
         : _sig(sig)
         , _slot(std::move(slt)) {
@@ -37,6 +36,10 @@ public:
     void move_helper(connection& other) {
       other.replace(this);
       other.disconnect();
+    }
+
+    void operator()(Args... args) const {
+      _slot(args...);
     }
 
     connection& operator=(connection&& other) noexcept {
@@ -66,6 +69,7 @@ public:
 
       this->unlink();
       _sig = nullptr;
+      _slot = nullptr;
     }
   };
 
@@ -142,7 +146,7 @@ public:
     while (token.it != token.sig->_connections.end()) {
       auto last_end = token.sig->_connections.end();
       auto copy = token.it++;
-      copy->_slot(std::forward<Args>(args)...);
+      (*copy)(args...);
       if (token.is_deleted || token.it == last_end) {
         return;
       }

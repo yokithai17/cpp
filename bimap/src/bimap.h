@@ -3,6 +3,7 @@
 #include "intrusive_map.h"
 
 #include <cstddef>
+#include <memory>
 #include <stdexcept>
 #include <type_traits>
 
@@ -25,7 +26,7 @@ class bimap {
   size_type size_{0};
 
   template <bool IsLeft>
-  static base_node_t* node_to_base(node_t* raw_node) {
+  static base_node_t* node_to_base(node_t* raw_node) noexcept {
     if constexpr (IsLeft) {
       return static_cast<base_node_t*>(static_cast<left_node_t*>(raw_node));
     } else {
@@ -34,12 +35,20 @@ class bimap {
   }
 
   template <bool IsLeft>
-  static node_t* base_to_node(base_node_t* node) {
+  static node_t* base_to_node(base_node_t* node) noexcept {
     if constexpr (IsLeft) {
       return static_cast<node_t*>(static_cast<left_node_t*>(node));
     } else {
       return static_cast<node_t*>(static_cast<right_node_t*>(node));
     }
+  }
+
+  void erase_(base_node_t* left_node, base_node_t* right_node) noexcept {
+    map_left.erase(left_node);
+    map_right.erase(right_node);
+    auto* raw_node = base_to_node<true>(left_node);
+    delete raw_node;
+    --size_;
   }
 
 public:
@@ -90,7 +99,7 @@ public:
     clear();
   }
 
-  void clear() {
+  void clear() noexcept {
     erase_left(this->begin_left(), this->end_left());
   }
 
@@ -101,42 +110,32 @@ public:
     }
 
     auto* raw_node = new node_t(std::forward<L>(left), std::forward<R>(right));
+    auto smart_node_ptr = std::unique_ptr<node_t>(raw_node);
+
     base_node_t* res = nullptr;
-    try {
-      auto* left_node = node_to_base<true>(raw_node);
-      res = map_left.insert(left_node);
-    } catch (...) {
-      delete raw_node;
-      throw;
-    }
+    auto* left_node = node_to_base<true>(raw_node);
+    res = map_left.insert(left_node);
 
     try {
       auto* right_node = node_to_base<false>(raw_node);
       map_right.insert(right_node);
     } catch (...) {
       map_left.erase(res);
-      delete raw_node;
       throw;
     }
+
+    smart_node_ptr.release();
     ++size_;
     return left_iterator(res);
   }
 
-  void erase_(base_node_t* left_node, base_node_t* right_node) {
-    map_left.erase(left_node);
-    map_right.erase(right_node);
-    auto* raw_node = base_to_node<true>(left_node);
-    delete raw_node;
-    --size_;
-  }
-
-  left_iterator erase_left(left_iterator it) {
+  left_iterator erase_left(left_iterator it) noexcept {
     auto del = it++;
     erase_(del.get_data(), del.flip().get_data());
     return it;
   }
 
-  right_iterator erase_right(right_iterator it) {
+  right_iterator erase_right(right_iterator it) noexcept {
     auto del = it++;
     erase_(del.flip().get_data(), del.get_data());
     return it;
@@ -185,7 +184,9 @@ public:
     if (it != this->end_left()) {
       return *it.flip();
     }
-    throw std::out_of_range("");
+    throw std::out_of_range(
+        "[ERROR] : Iterator is out of range: attempted to access an element beyond the end of the container."
+    );
   }
 
   const Left& at_right(const Right& key) const {
@@ -193,7 +194,9 @@ public:
     if (it != this->end_right()) {
       return *it.flip();
     }
-    throw std::out_of_range("");
+    throw std::out_of_range(
+        "[ERROR] : Iterator is out of range: attempted to access an element beyond the end of the container."
+    );
   }
 
   const Right& at_left_or_default(const Left& key)
@@ -211,20 +214,16 @@ public:
     }
 
     auto* row_node = new node_t(key, std::move(r));
+    auto row_node_smart_ptr = std::unique_ptr<node_t>(row_node);
 
     auto right_node = node_to_base<false>(row_node);
     auto left_node = node_to_base<true>(row_node);
 
-    try {
-      map_left.insert(left_node);
-      map_left.erase(replace_right.flip().get_data());
-      replace_right.get_data()->replace(right_node);
-      delete base_to_node<false>(replace_right.get_data());
-      return static_cast<right_node_t*>(row_node)->get();
-    } catch (...) {
-      delete row_node;
-      throw;
-    }
+    map_left.insert(left_node);
+    map_left.erase(replace_right.flip().get_data());
+    replace_right.get_data()->replace(right_node);
+    delete base_to_node<false>(replace_right.get_data());
+    return static_cast<right_node_t*>(row_node_smart_ptr.release())->get();
   }
 
   const Left& at_right_or_default(const Right& key)
@@ -242,20 +241,16 @@ public:
     }
 
     auto* row_node = new node_t(std::move(l), key);
+    auto row_node_smart_ptr = std::unique_ptr<node_t>(row_node);
 
     auto left_node = node_to_base<true>(row_node);
     auto right_node = node_to_base<false>(row_node);
 
-    try {
-      map_right.insert(right_node);
-      map_right.erase(replace_left.flip().get_data());
-      replace_left.get_data()->replace(left_node);
-      delete base_to_node<true>(replace_left.get_data());
-      return static_cast<left_node_t*>(row_node)->get();
-    } catch (...) {
-      delete row_node;
-      throw;
-    }
+    map_right.insert(right_node);
+    map_right.erase(replace_left.flip().get_data());
+    replace_left.get_data()->replace(left_node);
+    delete base_to_node<true>(replace_left.get_data());
+    return static_cast<left_node_t*>(row_node_smart_ptr.release())->get();
   }
 
   left_iterator lower_bound_left(const Left& left) const {

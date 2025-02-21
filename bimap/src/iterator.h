@@ -61,11 +61,9 @@ struct based_iterator {
     return opposite_iterator(static_cast<map_element_base*>(static_cast<opposite_node_t*>(based)));
   }
 
-  bool operator==(const based_iterator& rhs) const& noexcept = default;
+  bool operator==(const based_iterator& rhs) const noexcept = default;
 
-  bool operator!=(const based_iterator& rhs) const& noexcept {
-    return !(*this == rhs);
-  }
+  bool operator!=(const based_iterator& rhs) const noexcept = default;
 
   explicit based_iterator(map_element_base* current) noexcept
       : current(current) {}
